@@ -1,52 +1,36 @@
 import gradio as gr
-import tensorflow as tf
 import numpy as np
+from keras.models import load_model
 from PIL import Image
 
-# Load the pre-trained MNIST model
-model = tf.keras.models.load_model('mnist_model.h5')
+# Load the trained model
+model = load_model('mnist_model.h5')
 
-# Function to make predictions
-def predict_image(drawing):
-    try:
-        # Get the drawing as a NumPy array
-        img_array = drawing.image
+# Define the prediction function
+def predict_digit(image):
+    # Convert Gradio Image to NumPy array
+    img_array = np.array(image)
+    
+    # Convert to grayscale and resize to 28x28 (MNIST model input size)
+    img = Image.fromarray(img_array).convert('L').resize((28, 28))
+    
+    # Convert to NumPy array and normalize
+    img = np.array(img).astype('float32') / 255.0
+    
+    # Reshape to match the model input shape
+    img = img.reshape((1, 28, 28, 1))
+    
+    # Make the prediction
+    prediction = model.predict(img)
+    
+    # Get the predicted digit
+    predicted_digit = np.argmax(prediction)
 
-        # Resize the input image to (28, 28)
-        pil_image = Image.fromarray((img_array * 255).astype('uint8'))
-        pil_image = pil_image.resize((28, 28))
+    return str(predicted_digit)
 
-        # Convert the image to grayscale
-        pil_image = pil_image.convert("L")
-
-        # Convert the image to a numpy array
-        img_array = np.array(pil_image)
-
-        # Normalize the pixel values to the range [0, 1]
-        img_array = img_array.astype('float32') / 255.0
-
-        # Ensure the array has the correct shape
-        if img_array.shape == (28, 28):
-            img_array = np.expand_dims(img_array, axis=-1)
-
-            # Make predictions
-            predictions = model.predict(np.expand_dims(img_array, axis=0))
-
-            # Get the predicted class
-            predicted_class = np.argmax(predictions[0])
-
-            return f"Predicted Digit: {predicted_class}"
-        else:
-            return "Error: Invalid image size after resizing"
-    except Exception as e:
-        return f"Error during prediction: {str(e)}"
-
-# Create the Gradio interface with a drawing input
 iface = gr.Interface(
-    fn=predict_image,
-    inputs=gr.Drawing(allow_clear=True),
-    outputs="text",
+    fn=predict_digit,
+    inputs=gr.Image(type="pil", height=280, width=280, label="Draw a digit"),
+    outputs="text"
 )
-
-# Launch the Gradio interface
 iface.launch()

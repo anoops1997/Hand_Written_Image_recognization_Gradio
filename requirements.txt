@@ -1,4 +1,4 @@
-gradio ==2.0.0
+gradio
 tensorflow
 keras
 pillow
